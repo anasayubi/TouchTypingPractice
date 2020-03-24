@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const readline = require('readline');
+const inquirer = require('inquirer');
 
 // Word length length distribution:
 // 2 chars:  5% | cumulative:   5%
@@ -9,44 +10,116 @@ const readline = require('readline');
 // 6 chars: 15% | cumulative: 100%
 // Total: 100%
 
-console.log()
+inquirer
+  .prompt([
+    {
+      type: 'checkbox',
+      message: 'Which keyboard rows should be included in the practice?',
+      name: 'rowsIncluded',
+      choices: [
+        { name: 'Top Row', value: 'topRow' },
+        { name: 'Home Row', value: 'homeRow' },
+        { name: 'Bottom Row', value: 'bottomRow' },
+      ]
+    },
+    {
+      type: 'list',
+      message: 'How many characters should be printed',
+      name: 'numberOfChars',
+      choices: [
+        { name: '30', value: 30 },
+        { name: '50', value: 50 }
+      ]
+    }
+    // '?'
+  ])
+  .then(answers => {
+    // console.log(answers);
 
-let chooseableLetters = [
-  'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
-  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';',
-];
+    let topRow = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
+    let homeRow = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';'];
+    let bottomRow = ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?'];
+    let allChars = [];
 
-words = generateWords(chooseableLetters);
-console.log(words);
-singleWordStr = generateAllWordsStr(words);
-console.log(singleWordStr);
-matchUserInput(singleWordStr);
+    if (answers.rowsIncluded.includes('topRow'))
+      allChars = allChars.concat(topRow);
+    if (answers.rowsIncluded.includes('homeRow'))
+      allChars = allChars.concat(homeRow);
+    if (answers.rowsIncluded.includes('bottomRow'))
+      allChars = allChars.concat(bottomRow);
+
+    words = generateWords(allChars, answers.numberOfChars);
+    // console.log(words);
+    singleWordStr = generateAllWordsStr(words);
+    console.log();
+    console.log('To end the prcatice press <Esc> at any time.');
+    console.log();
+    console.log(singleWordStr);
+    matchUserInput(singleWordStr);
+  })
+  .catch(error => {
+    if (error.isTtyError) {
+      // Prompt couldn't be rendered in the current environment
+    } else {
+      // Something else when wrong
+    }
+  });
 
 function matchUserInput(wordStr) {
-  readline.emitKeypressEvents(process.stdin);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    terminal: true
+  });
+
+  readline.emitKeypressEvents(process.stdin, rl);
   process.stdin.setRawMode(true);
+
   let count = 0;
-  
+  let firstKeyPress = true;
+  let startTime;
+
   process.stdin.on('keypress', (str, key) => {
-  
-    if (key.name === 'escape') {
-      console.log();
+
+    if (firstKeyPress) {
+      startTime = new Date().getTime();
+      firstKeyPress = false;
+    }
+
+    // last key pressed
+    if (count == (wordStr.length - 1)) {
+      printCPM(startTime, wordStr);
       process.exit();
     }
-  
+
+    if (key.name === 'escape') {
+      printCPM(startTime, wordStr);
+      // console.log();
+      process.exit();
+    }
+
     if (wordStr[count] !== str.toUpperCase())
       process.stdout.write(chalk.red(str.toUpperCase()));
     else
       process.stdout.write(str.toUpperCase());
-  
+
     count++;
-  
+
     //   console.log('str:')
     //   console.log(str)
     //   console.log('key:')
     //   console.log(key)
-  
+
   });
+}
+
+function printCPM(startTime, wordStr) {
+  let endTime = new Date().getTime();
+  let difference = endTime - startTime;
+  let cpm = difference / wordStr.length;
+
+  console.log();
+  console.log();
+  console.log("Speed: " + Number(cpm).toFixed(2) + " CPM");
 }
 
 function generateAllWordsStr(words) {
@@ -58,8 +131,8 @@ function generateAllWordsStr(words) {
   return allWordsString;
 }
 
-function generateWords(lettersToChooseFrom) {
-  let wordLengths = chooseWordLengths();
+function generateWords(lettersToChooseFrom, numberOfChars) {
+  let wordLengths = chooseWordLengths(numberOfChars);
   words = wordLengths.map((wordLength) => {
     let letters = '';
 
@@ -91,15 +164,14 @@ function chooseWordLength() {
     return 6;
 }
 
-function chooseWordLengths() {
-  let maxWordLength = 30;
+function chooseWordLengths(totalChars) {
   let listOfWordLengths = [];
   let stopAddingWords = false;
   while (!stopAddingWords) {
     let wordLengthChosen = chooseWordLength();
     listOfWordLengths.push(wordLengthChosen);
-    maxWordLength -= wordLengthChosen;
-    if (maxWordLength <= 0)
+    totalChars -= wordLengthChosen;
+    if (totalChars <= 0)
       stopAddingWords = true;
   }
 
