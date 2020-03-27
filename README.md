@@ -1,4 +1,4 @@
-# TouchTypingPractice
+# Touch Typing Practice
 A simple CLI tool that allows you to practice your touch typing skills and increase your WPM
 
 ![Screenshot](https://github.com/anasayubi/TouchTypingPractice/blob/master/example.png)
